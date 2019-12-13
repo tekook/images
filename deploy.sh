@@ -5,6 +5,8 @@ while [ "$1" != "" ]; do
     case $1 in
         -p | --push )           PUSH_TO_REGISTRY=1
                                 ;;
+        --latest)               PUSH_LATEST=1
+                                ;;
     esac
     shift
 done
@@ -35,6 +37,11 @@ for image in ${IMAGES[@]}; do
             docker push ${imageName}:${short_version}
         fi
     done
+    if [ ! -z "$PUSH_LATEST" ]
+    then
+        echo pushing: ${imageName}:latest
+        docker push ${imageName}:latest
+    fi
 done
 
 
