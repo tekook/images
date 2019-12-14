@@ -27,7 +27,7 @@ for image in ${IMAGES[@]}; do
     echo Building ${imageName} from ${dockerFile}
     for version in ${PHP_VERSION[@]}; do
         echo Building php-version: $version
-        short_version=${version%.*}
+        short_version=${IMAGE_VERSION%.*}
 
         if [ -z "$SKIP_BUILD" ]
         then
@@ -35,15 +35,15 @@ for image in ${IMAGES[@]}; do
         fi
 
         docker tag ${imageName} ${imageName}:${IMAGE_VERSION}_${version}
-        docker tag ${imageName} ${imageName}:${IMAGE_VERSION}_${short_version}
+        docker tag ${imageName} ${imageName}:${short_version}_${version}
 
 
         if [ ! -z "$PUSH_TO_REGISTRY" ]
         then
             echo pushing: ${imageName}:${IMAGE_VERSION}_${version} 
             docker push ${imageName}:${IMAGE_VERSION}_${version}
-            echo pushing: ${imageName}:${IMAGE_VERSION}_${short_version} 
-            docker push ${imageName}:${IMAGE_VERSION}_${short_version}
+            echo pushing: ${imageName}:${short_version}_${version}
+            docker push ${imageName}:${short_version}_${version}
         fi
     done
     if [ ! -z "$PUSH_LATEST" ]
