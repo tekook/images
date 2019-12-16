@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 export PUBLISHER=tekook
-export IMAGES=("laravel-fpm")
+export IMAGES=("laravel-fpm" "laravel-fpm-sqlsrv")
 export IMAGE_VERSION=1.0.0
 
 while [ "$1" != "" ]; do
@@ -16,7 +16,7 @@ while [ "$1" != "" ]; do
                                 ;;
         --push-latest)          PUSH_LATEST=1
                                 ;;
-        --no-pause )            NO_PAUSE_ON_END=1
+        --pause )               PAUSE_ON_END=1
                                 ;;
     esac
     shift
@@ -25,68 +25,95 @@ done
 function buildImage {
     local dockerFile=$1
     local imageName=$2
-
+    
     if [ -z "$SKIP_BUILD" ]
     then
-        docker build . -f ${dockerFile} -t ${imageName}
+        echo Building ${dockerFile} as ${imageName}
+        docker build . -q -f ${dockerFile} -t ${imageName}
+    else
+        echo Skipped building ${dockerFile} as ${imageName}
     fi
 }
 
-function tagImage {
+function tagAndPushImage {
     local imageName=$1
     local imageVersion=$2
     local suffixVersion=$3
-    if [ -z ${suffixVersion} ]
+    if [ ! -z "${suffixVersion}" ]
     then
-        suffixVersion=_$suffixVersion
-    fi;
+        suffixVersion="_${suffixVersion}"
 
+    fi;
+    echo Tagging: ${imageName} with version: ${imageVersion}${suffixVersion}
     docker tag ${imageName} ${imageName}:${imageVersion}${suffixVersion}
     docker tag ${imageName} ${imageName}:${imageVersion%.*}${suffixVersion}
 
+    if [ ! -z "$PUSH_TO_REGISTRY" ]
+    then
+        echo Pushing: ${imageName}:${imageVersion}${suffixVersion}
+        docker push ${imageName}:${imageVersion}${suffixVersion}
+        docker push ${imageName}:${imageVersion%.*}${suffixVersion}
+    else
+        echo Skipped pushing: ${imageName}
+    fi
+
+}
+
+function pushLasted {
+    local imageName=$1
+    if [ ! -z "$PUSH_LATEST" ]
+    then
+        echo Pushing: ${imageName}:latest
+        docker push ${imageName}:latest
+    else
+        echo Skipped pushing: ${imageName}:latest
+    fi
+}
+
+function handleDockerfile {
+    local dockerFile=$1
+    local folder=$2
+    local imageName=$3
+    local imageVersion=$4
+
+    echo Using Dockerfile: ${dockerFile}
+    local repl=$folder/
+    local version=${dockerFile/$repl}
+    version=${version/.Dockerfile}
+    echo PHP-Version: ${version}
+
+    buildImage ${dockerFile} ${imageName}
+    tagAndPushImage ${imageName} ${imageVersion} ${version}
+}
+
+function handleImage {
+    local image=$1
+    local folder=./${image//-//}
+    local imageName=${PUBLISHER}/${image}
+    local imageVersion=$(cat $folder/VERSION)
+    local imageVersionShort=${imageVersion%.*}
+
+    echo Image: ${image} v${imageVersion}
+
+    local dockerFile=${folder}/Dockerfile
+    if [ -f "${dockerFile}" ]
+    then
+        handleDockerfile ${dockerFile} ${folder} ${imageName} ${imageVersion}
+    fi
+
+    for dockerFile in ${folder}/*.Dockerfile; do
+        handleDockerfile ${dockerFile} ${folder} ${imageName} ${imageVersion}
+    done;
+    pushLasted ${imageName}
 }
 
 
 
 for image in ${IMAGES[@]}; do
-    folder=./${image//-//}
-    imageName=${PUBLISHER}/${image}
-    imageVersion=$(cat $folder/VERSION)
-    imageVersionShort=${imageVersion%.*}
-
-    echo Image: ${image} (${imageVersion})
-
-
-    for dockerFile in ${folder}/*.Dockerfile; do
-        echo Using Dockerfile: ${dockerFile}
-        repl=$folder/
-        version=${dockerFile/$repl}
-        version=${version/.Dockerfile}
-        echo PHP-Version: ${version}
-
-        buildImage ${dockerFile} ${imageName}
-
-        docker tag ${imageName} ${imageName}:${imageVersion}_${version}
-        docker tag ${imageName} ${imageName}:${imageVersionShort}_${version}
-
-        if [ ! -z "$PUSH_TO_REGISTRY" ]
-        then
-            echo pushing: ${imageName}:${imageVersion}_${version} 
-            docker push ${imageName}:${imageVersion}_${version}
-            echo pushing: ${imageName}:${imageVersionShort}_${version}
-            docker push ${imageName}:${imageVersionShort}_${version}
-        fi
-
-    done;
-
-    if [ ! -z "$PUSH_LATEST" ]
-    then
-        echo pushing: ${imageName}:latest
-        docker push ${imageName}:latest
-    fi
+    handleImage ${image}
 done
 
-if [ ! -z "$NO_PAUSE_ON_END" ]
+if [ ! -z "$PAUSE_ON_END" ]
 then
     read -n1 -r -p "Press any key to continue..." key
 fi
