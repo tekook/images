@@ -3,7 +3,6 @@
 export PUBLISHER=tekook
 export IMAGES=("laravel-fpm")
 export IMAGE_VERSION=1.0.0
-export PHP_VERSION=("7.3.12" "7.4.0")
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -17,35 +16,69 @@ while [ "$1" != "" ]; do
                                 ;;
         --push-latest)          PUSH_LATEST=1
                                 ;;
+        --no-pause )            NO_PAUSE_ON_END=1
+                                ;;
     esac
     shift
 done
 
+function buildImage {
+    local dockerFile=$1
+    local imageName=$2
+
+    if [ -z "$SKIP_BUILD" ]
+    then
+        docker build . -f ${dockerFile} -t ${imageName}
+    fi
+}
+
+function tagImage {
+    local imageName=$1
+    local imageVersion=$2
+    local suffixVersion=$3
+    if [ -z ${suffixVersion} ]
+    then
+        suffixVersion=_$suffixVersion
+    fi;
+
+    docker tag ${imageName} ${imageName}:${imageVersion}${suffixVersion}
+    docker tag ${imageName} ${imageName}:${imageVersion%.*}${suffixVersion}
+
+}
+
+
+
 for image in ${IMAGES[@]}; do
-    dockerFile=./${image//-//}/Dockerfile
+    folder=./${image//-//}
     imageName=${PUBLISHER}/${image}
-    echo Building ${imageName} from ${dockerFile}
-    for version in ${PHP_VERSION[@]}; do
-        echo Building php-version: $version
-        short_version=${IMAGE_VERSION%.*}
+    imageVersion=$(cat $folder/VERSION)
+    imageVersionShort=${imageVersion%.*}
 
-        if [ -z "$SKIP_BUILD" ]
-        then
-           docker build . -f ${dockerFile} -t ${imageName} --build-arg PHP_VERSION=${version}
-        fi
+    echo Image: ${image} (${imageVersion})
 
-        docker tag ${imageName} ${imageName}:${IMAGE_VERSION}_${version}
-        docker tag ${imageName} ${imageName}:${short_version}_${version}
 
+    for dockerFile in ${folder}/*.Dockerfile; do
+        echo Using Dockerfile: ${dockerFile}
+        repl=$folder/
+        version=${dockerFile/$repl}
+        version=${version/.Dockerfile}
+        echo PHP-Version: ${version}
+
+        buildImage ${dockerFile} ${imageName}
+
+        docker tag ${imageName} ${imageName}:${imageVersion}_${version}
+        docker tag ${imageName} ${imageName}:${imageVersionShort}_${version}
 
         if [ ! -z "$PUSH_TO_REGISTRY" ]
         then
-            echo pushing: ${imageName}:${IMAGE_VERSION}_${version} 
-            docker push ${imageName}:${IMAGE_VERSION}_${version}
-            echo pushing: ${imageName}:${short_version}_${version}
-            docker push ${imageName}:${short_version}_${version}
+            echo pushing: ${imageName}:${imageVersion}_${version} 
+            docker push ${imageName}:${imageVersion}_${version}
+            echo pushing: ${imageName}:${imageVersionShort}_${version}
+            docker push ${imageName}:${imageVersionShort}_${version}
         fi
-    done
+
+    done;
+
     if [ ! -z "$PUSH_LATEST" ]
     then
         echo pushing: ${imageName}:latest
@@ -53,5 +86,7 @@ for image in ${IMAGES[@]}; do
     fi
 done
 
-
-read -n1 -r -p "Press any key to continue..." key
+if [ ! -z "$NO_PAUSE_ON_END" ]
+then
+    read -n1 -r -p "Press any key to continue..." key
+fi

@@ -1,5 +1,4 @@
-ARG PHP_VERSION=7.4
-FROM php:${PHP_VERSION}-fpm
+FROM php:7.3.12-fpm
 
 
 # Install the requirements for laravel
