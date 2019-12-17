@@ -3,6 +3,7 @@
 export PUBLISHER=tekook
 export IMAGES=("laravel-fpm" "laravel-fpm-sqlsrv")
 export IMAGE_VERSION=1.0.0
+export INDENT=0
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -39,11 +40,7 @@ function tagAndPushImage {
     local imageName=$1
     local imageVersion=$2
     local suffixVersion=$3
-    if [ ! -z "${suffixVersion}" ]
-    then
-        suffixVersion="_${suffixVersion}"
 
-    fi;
     echo Tagging: ${imageName} with version: ${imageVersion}${suffixVersion}
     docker tag ${imageName} ${imageName}:${imageVersion}${suffixVersion}
     docker tag ${imageName} ${imageName}:${imageVersion%.*}${suffixVersion}
@@ -72,18 +69,52 @@ function pushLasted {
 
 function handleDockerfile {
     local dockerFile=$1
-    local folder=$2
-    local imageName=$3
-    local imageVersion=$4
+    local imageName=$2
+    local imageVersion=$3
+    local subVersion=$4
+    if [ ! -z "$subVersion" ]
+    then
+        subVersion=-$subVersion
+    fi;
 
-    echo Using Dockerfile: ${dockerFile}
-    local repl=$folder/
-    local version=${dockerFile/$repl}
-    version=${version/.Dockerfile}
-    echo PHP-Version: ${version}
+    echo Using Dockerfile: ${dockerFile} as $imageName:$imageVersion$subVersion
 
     buildImage ${dockerFile} ${imageName}
-    tagAndPushImage ${imageName} ${imageVersion} ${version}
+    tagAndPushImage ${imageName} ${imageVersion} ${subVersion}
+}
+
+function handleImageSubFoldersRecursive {
+    local folder=$1
+    local imageName=$2
+    local imageVersion=$3
+    local subVersion=$4
+
+
+    echo Handling sub-images in ${folder} with subVersion \"${subVersion}\"
+    # Handle sub-images in "_*/" Folders
+
+    local subImage
+    local version
+    local dockerFile
+    for subImage in ${folder}/_*; do
+        if [[ -d "${subImage}" && ! -L "${subImage}" ]]
+        then
+            version=${subImage##*/}
+            version=${version:1}
+            if [ ! -z "${subVersion}" ]
+            then
+                version=${subVersion}-${version}
+            fi;
+            echo $subImage -- $version
+            handleImageSubFoldersRecursive ${subImage} ${imageName} ${imageVersion} ${version}
+
+            dockerFile=$subImage/Dockerfile
+            if [ -f "$dockerFile" ]
+            then
+                handleDockerfile $dockerFile $imageName $imageVersion $version
+            fi;
+        fi
+    done;
 }
 
 function handleImage {
@@ -91,20 +122,30 @@ function handleImage {
     local folder=./${image//-//}
     local imageName=${PUBLISHER}/${image}
     local imageVersion=$(cat $folder/VERSION)
-    local imageVersionShort=${imageVersion%.*}
 
+    echo
+    echo "#####################"
+    echo
     echo Image: ${image} v${imageVersion}
 
+    handleImageSubFoldersRecursive ${folder} ${imageName} ${imageVersion}
+
+    echo
+    echo "#####################"
+    echo
+    # Handle "Dockerfile" of Main Image
+    
     local dockerFile=${folder}/Dockerfile
     if [ -f "${dockerFile}" ]
     then
-        handleDockerfile ${dockerFile} ${folder} ${imageName} ${imageVersion}
+        handleDockerfile ${dockerFile} ${imageName} ${imageVersion}
+    else
+        echo No Main Dockerfile found, skipping.
     fi
-
-    for dockerFile in ${folder}/*.Dockerfile; do
-        handleDockerfile ${dockerFile} ${folder} ${imageName} ${imageVersion}
-    done;
     pushLasted ${imageName}
+    echo
+    echo "#####################"
+    echo
 }
 
 
