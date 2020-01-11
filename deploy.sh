@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 export PUBLISHER=tekook
-export IMAGES=("laravel-fpm" "laravel-fpm-sqlsrv")
+export IMAGES=("laravel-fpm" "laravel-fpm-sqlsrv" "laravel-fpm-gd")
 export IMAGE_VERSION=1.0.0
 export INDENT=0
 
