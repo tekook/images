@@ -1,14 +1,14 @@
-FROM php:7.3.12-fpm
+FROM php:7.3.14-fpm-alpine
 
 
 # Install the requirements for laravel
-RUN apt-get update && \
-        apt-get install -y --no-install-recommends libzip-dev zlib1g-dev sqlite3 libsqlite3-dev \
+RUN apk update && \
+        apk add zlib-dev libzip-dev sqlite sqlite-dev \
         && docker-php-ext-install pdo pdo_mysql zip pdo_sqlite bcmath
 
 # Install GD
-RUN apt-get update && \
-        apt-get install -y --no-install-recommends libpng-dev libfreetype6-dev libjpeg62-turbo-dev \
+RUN apk update && \
+        apk add libpng-dev freetype-dev libjpeg-turbo-dev \
         && docker-php-ext-configure gd --with-freetype-dir=/usr/include --with-jpeg-dir=/usr/include \
         && docker-php-ext-install gd
 
