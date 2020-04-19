@@ -15,14 +15,16 @@ if [ -d "storage" ]; then
     chown -R www-data:www-data /app/storage
 fi
 
-if [ -f "/app/artisan" ]; then
+if [ -f "artisan" ]; then
     # enable crontab if wanted
     if [ "$ENABLE_CRONJOB" ]; then
-        crontab -l | { cat; echo "* * * * * cd /app && php artisan schedule:run >> /dev/null 2>&1"; } | crontab -
+        echo Enabled CronJob
+        crontab -l | { cat; echo "* * * * * cd ${PWD} && php artisan schedule:run >> /dev/null 2>&1"; } | crontab -
     fi
 
     # enable migration if wanted
     if [ "$ENABLE_MIGRATION" ]; then
+        echo Running Migration
         (cd /app && php artisan migrate --force)
     fi
 fi
