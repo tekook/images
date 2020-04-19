@@ -15,3 +15,4 @@ WORKDIR /app
 #Set EntryPoint
 COPY docker-laravel-entrypoint /usr/local/bin/
 ENTRYPOINT [ "docker-laravel-entrypoint" ]
+CMD ["php-fpm"]
