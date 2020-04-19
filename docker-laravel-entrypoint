@@ -2,10 +2,10 @@
 set -e
 
 # ensure directories existence
-if [ -d "/app/storage" ]; then
+if [ -d "storage" ]; then
     dirs="/app/public /logs /framework/cache /framework/sessions /framework/testing /framework/views"
     for dir in ${dirs}; do
-        _dir=/app/storage${dir}
+        _dir=storage${dir}
         if [ ! -d ${_dir} ]; then
             mkdir -p ${_dir}
         fi
