@@ -16,14 +16,8 @@ if [ -d "storage" ]; then
 fi
 
 if [ -f "artisan" ]; then
-    # enable crontab if wanted
-    if [ "$ENABLE_CRONJOB" ]; then
-        echo Enabled CronJob
-        crontab -l | { cat; echo "* * * * * cd ${PWD} && php artisan schedule:run >> /dev/null 2>&1"; } | crontab -
-    fi
-
-    # enable migration if wanted
-    if [ "$ENABLE_MIGRATION" ]; then
+    # run migration if wanted
+    if [ "$RUN_MIGRATION" ]; then
         echo Running Migration
         (cd /app && php artisan migrate --force)
     fi
