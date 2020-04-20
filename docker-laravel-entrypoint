@@ -15,16 +15,29 @@ if [ -d "storage" ]; then
     chown -R www-data:www-data /app/storage
 fi
 
-if [ -f "artisan" ]; then
-    # run migration if wanted
-    if [ "$RUN_MIGRATION" ]; then
-        echo Running Migration
-        (cd /app && php artisan migrate --force)
+if [ "$1" = "scheduler" ]; then
+    shift;
+    echo Setting up crontab file
+    (crontab -l | grep -qxF "php artisan schedule:run" ) || (crontab -l | { cat; echo "* * * * * cd ${PWD} && php artisan schedule:run 2>&1"; } | crontab -)
+    set -- crond -d 8 -f $@
+    echo Starting crond
+elif [ "$1" = "queue" ]; then
+    shift;
+    set -- php artisan queue:work $@
+    echo Starting QueueWorker
+else
+    if [ -f "artisan" ]; then
+        # run migration if wanted
+        if [ "$RUN_MIGRATION" ]; then
+            echo Running Migration
+            (cd /app && php artisan migrate --force)
+        fi
+    fi
+
+    # first arg is `-f` or `--some-option`
+    if [ "${1#-}" != "$1" ]; then
+        set -- php-fpm "$@"
     fi
 fi
 
-# first arg is `-f` or `--some-option`
-if [ "${1#-}" != "$1" ]; then
-	set -- php-fpm "$@"
-fi
 exec "$@"
