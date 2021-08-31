@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 export PUBLISHER=tekook
-export IMAGES=("laravel-fpm" "laravel-fpm-sqlsrv")
+export IMAGES=("laravel-fpm")
 export IMAGE_VERSION=1.0.0
 export INDENT=0
 
@@ -43,17 +43,20 @@ function tagAndPushImage {
 
     echo Tagging: ${imageName} with version: ${imageVersion}${suffixVersion}
     docker tag ${imageName} ${imageName}:${imageVersion}${suffixVersion}
+    if [[ $? -ne 0 ]]; then return 1;fi;
     docker tag ${imageName} ${imageName}:${imageVersion%.*}${suffixVersion}
-
+    if [[ $? -ne 0 ]]; then return 1;fi;
     if [ ! -z "$PUSH_TO_REGISTRY" ]
     then
         echo Pushing: ${imageName}:${imageVersion}${suffixVersion}
         docker push ${imageName}:${imageVersion}${suffixVersion}
+        if [[ $? -ne 0 ]]; then return 1;fi;
         docker push ${imageName}:${imageVersion%.*}${suffixVersion}
+        if [[ $? -ne 0 ]]; then return 1;fi;
     else
         echo Skipped pushing: ${imageName}
     fi
-
+    return 0
 }
 
 function pushLasted {
@@ -80,7 +83,28 @@ function handleDockerfile {
     echo Using Dockerfile: ${dockerFile} as $imageName:$imageVersion$subVersion
 
     buildImage ${dockerFile} ${imageName}
-    tagAndPushImage ${imageName} ${imageVersion} ${subVersion}
+    if [ $? -eq 0 ]
+    then
+        tagAndPushImage ${imageName} ${imageVersion} ${subVersion}
+        if [[ $? -ne 0 ]]
+        then
+            echo
+            echo "#######################"
+            echo
+            echo "Push or tag failed"
+            echo
+            echo "#######################"
+            echo
+        fi
+    else
+        echo
+        echo "#######################"
+        echo
+        echo "Build failed cannot push or tag"
+        echo
+        echo "#######################"
+        echo
+    fi;
 }
 
 function handleImageSubFoldersRecursive {
