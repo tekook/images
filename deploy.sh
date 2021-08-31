@@ -145,7 +145,7 @@ function handleImage {
     local image=$1
     local folder=./${image//-//}
     local imageName=${PUBLISHER}/${image}
-    local imageVersion=$(cat $folder/VERSION)
+    local imageVersion=$(cat $folder/VERSION || echo "0.0")
 
     echo
     echo "#####################"
