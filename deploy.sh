@@ -55,6 +55,8 @@ function tagAndPushImage {
         if [[ $? -ne 0 ]]; then return 1;fi;
         docker push ${imageName}:${imageVersion%.*}${suffixVersion}
         if [[ $? -ne 0 ]]; then return 1;fi;
+        docker push ${imageName}:${suffixVersion:1}
+        if [[ $? -ne 0 ]]; then return 1;fi;
     else
         echo Skipped pushing: ${imageName}
     fi
