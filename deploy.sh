@@ -46,6 +46,8 @@ function tagAndPushImage {
     if [[ $? -ne 0 ]]; then return 1;fi;
     docker tag ${imageName} ${imageName}:${imageVersion%.*}${suffixVersion}
     if [[ $? -ne 0 ]]; then return 1;fi;
+    docker tag ${imageName} ${imageName}:${suffixVersion:1}
+    if [[ $? -ne 0 ]]; then return 1;fi;
     if [ ! -z "$PUSH_TO_REGISTRY" ]
     then
         echo Pushing: ${imageName}:${imageVersion}${suffixVersion}
