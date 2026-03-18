@@ -2,7 +2,7 @@
 
 export PUBLISHER=tekook
 export IMAGES=("laravel-fpm")
-export IMAGE_VERSION=1.0.0
+export IMAGE_VERSION=1.1.0
 export INDENT=0
 
 while [ "$1" != "" ]; do

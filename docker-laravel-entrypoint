@@ -15,15 +15,26 @@ if [ -d "storage" ]; then
     chown -R www-data:www-data /app/storage
 fi
 
+
 if [ "$1" = "scheduler" ]; then
     shift;
     echo Setting up crontab file
-    (crontab -l | grep -qxF "php artisan schedule:run" ) || (crontab -l | { cat; echo "* * * * * cd ${PWD} && php artisan schedule:run 2>&1"; } | crontab -)
+    (crontab -u www-data -l 2>/dev/null | grep -qxF "php artisan schedule:run" ) || (crontab -u www-data -l 2>/dev/null | { cat; echo "* * * * * cd ${PWD} && php artisan schedule:run 2>&1"; } | crontab -u www-data -)
     set -- crond -d 8 -f $@
     echo Starting crond
 elif [ "$1" = "queue" ]; then
     shift;
-    set -- php artisan queue:work $@
+    if command -v su-exec >/dev/null 2>&1; then
+        BINARY="su-exec www-data"
+    elif command -v gosu >/dev/null 2>&1; then
+        BINARY="gosu www-data"
+    else
+        # Fallback: su -s (shell) -c (command)
+        # Note: This is less ideal for signals but works without extra packages
+        BINARY="su -s /bin/sh www-data -c"
+    fi
+    echo "Using: $BINARY"
+    set -- $BINARY php artisan queue:work $@
     echo Starting QueueWorker
 else
     if [ -f "artisan" ]; then
