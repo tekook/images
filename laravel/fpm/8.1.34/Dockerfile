@@ -15,5 +15,6 @@ WORKDIR /app
 
 #Set EntryPoint
 COPY docker-laravel-entrypoint /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-laravel-entrypoint
 ENTRYPOINT [ "docker-laravel-entrypoint" ]
 CMD ["php-fpm"]
