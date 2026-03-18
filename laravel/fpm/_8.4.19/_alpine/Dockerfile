@@ -1,4 +1,4 @@
-FROM php:8.4.18-fpm-alpine
+FROM php:8.4.19-fpm-alpine
 
 
 # Install the requirements for laravel
