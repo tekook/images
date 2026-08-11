@@ -1,4 +1,4 @@
-FROM php:8.4.20-fpm
+FROM php:8.4.24-fpm
 
 
 # Install the requirements for laravel
