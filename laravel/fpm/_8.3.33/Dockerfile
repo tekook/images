@@ -1,4 +1,4 @@
-FROM php:8.4.18-fpm
+FROM php:8.3.33-fpm
 
 
 # Install the requirements for laravel
@@ -15,5 +15,6 @@ WORKDIR /app
 
 #Set EntryPoint
 COPY docker-laravel-entrypoint /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-laravel-entrypoint
 ENTRYPOINT [ "docker-laravel-entrypoint" ]
 CMD ["php-fpm"]

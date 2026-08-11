@@ -3,7 +3,7 @@
 export PUBLISHER=tekook
 export IMAGES=("laravel-fpm")
 export IMAGE_VERSION=1.1.0
-export INDENT=0
+export PLATFORMS="linux/amd64,linux/arm64"
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -13,8 +13,6 @@ while [ "$1" != "" ]; do
                                 ;;
         --publisher )           PUBLISHER=$2
                                 ;;
-        --skip-build )          SKIP_BUILD=1
-                                ;;
         --push-latest)          PUSH_LATEST=1
                                 ;;
         --pause )               PAUSE_ON_END=1
@@ -22,56 +20,55 @@ while [ "$1" != "" ]; do
     esac
     shift
 done
+if [ ! -z "$PUSH_LATEST" ]
+then
+    echo "Support for pushing latest has been dropped! Aborting."
+    exit 1
+fi
 
 function buildImage {
     local dockerFile=$1
     local imageName=$2
+    local tags=$3
     
-    if [ -z "$SKIP_BUILD" ]
-    then
-        echo Building ${dockerFile} as ${imageName}
-        docker build . -q -f ${dockerFile} -t ${imageName}
-    else
-        echo Skipped building ${dockerFile} as ${imageName}
-    fi
-}
+    # Determine which platforms to build
+    local targetPlatforms=$PLATFORMS
+    local buildAction="--load"
 
-function tagAndPushImage {
-    local imageName=$1
-    local imageVersion=$2
-    local suffixVersion=$3
-
-    echo Tagging: ${imageName} with version: ${imageVersion}${suffixVersion}
-    docker tag ${imageName} ${imageName}:${imageVersion}${suffixVersion}
-    if [[ $? -ne 0 ]]; then return 1;fi;
-    docker tag ${imageName} ${imageName}:${imageVersion%.*}${suffixVersion}
-    if [[ $? -ne 0 ]]; then return 1;fi;
-    docker tag ${imageName} ${imageName}:${suffixVersion:1}
-    if [[ $? -ne 0 ]]; then return 1;fi;
-    if [ ! -z "$PUSH_TO_REGISTRY" ]
-    then
-        echo Pushing: ${imageName}:${imageVersion}${suffixVersion}
-        docker push ${imageName}:${imageVersion}${suffixVersion}
-        if [[ $? -ne 0 ]]; then return 1;fi;
-        docker push ${imageName}:${imageVersion%.*}${suffixVersion}
-        if [[ $? -ne 0 ]]; then return 1;fi;
-        docker push ${imageName}:${suffixVersion:1}
-        if [[ $? -ne 0 ]]; then return 1;fi;
+    if [ ! -z "$PUSH_TO_REGISTRY" ]; then
+        buildAction="--push"
     else
-        echo Skipped pushing: ${imageName}
+        # If not pushing, we MUST build only for the local architecture to use --load
+        # Map uname -m to docker platform naming
+        local arch=$(uname -m)
+        case $arch in
+            x86_64)  targetPlatforms="linux/amd64" ;;
+            arm64|aarch64) targetPlatforms="linux/arm64" ;;
+            *)       targetPlatforms="linux/$arch" ;;
+        esac
+        echo "Local build detected. Overriding platforms to native: $targetPlatforms"
     fi
-    return 0
-}
+        
+    local tagArgs=""
+    for tag in $tags; do
+        tagArgs="$tagArgs -t $tag"
+    done
 
-function pushLasted {
-    local imageName=$1
-    if [ ! -z "$PUSH_LATEST" ]
-    then
-        echo Pushing: ${imageName}:latest
-        docker push ${imageName}:latest
-    else
-        echo Skipped pushing: ${imageName}:latest
-    fi
+    echo "-------------------------------------------------------"
+    echo " Building: $imageName"
+    echo " File:     $dockerFile"
+    echo " Platform: $targetPlatforms"
+    echo " Tags:     $tags"
+    echo "-------------------------------------------------------"
+
+    docker buildx build \
+        -f "${dockerFile}" \
+        --platform "${targetPlatforms}" \
+        ${tagArgs} \
+        ${buildAction} \
+        --progress tty \
+        .
+    echo
 }
 
 function handleDockerfile {
@@ -79,36 +76,27 @@ function handleDockerfile {
     local imageName=$2
     local imageVersion=$3
     local subVersion=$4
-    if [ ! -z "$subVersion" ]
-    then
+    
+    if [ ! -z "$subVersion" ]; then
         subVersion=-$subVersion
-    fi;
+    fi
 
-    echo Using Dockerfile: ${dockerFile} as $imageName:$imageVersion$subVersion
+    # Prepare all tags for this specific build
+    local fullTag="${imageName}:${imageVersion}${subVersion}"
+    local minorTag="${imageName}:${imageVersion%.*}${subVersion}"
+    local shortTag="${imageName}:${subVersion:1}"
+    
+    local allTags="$fullTag $minorTag $shortTag"
 
-    buildImage ${dockerFile} ${imageName}
-    if [ $? -eq 0 ]
-    then
-        tagAndPushImage ${imageName} ${imageVersion} ${subVersion}
-        if [[ $? -ne 0 ]]
-        then
-            echo
-            echo "#######################"
-            echo
-            echo "Push or tag failed"
-            echo
-            echo "#######################"
-            echo
-        fi
-    else
-        echo
+    echo "Using Dockerfile: ${dockerFile} with tags: ${allTags}"
+
+    buildImage "${dockerFile}" "${imageName}" "${allTags}"
+    
+    if [ $? -ne 0 ]; then
         echo "#######################"
-        echo
-        echo "Build failed cannot push or tag"
-        echo
+        echo "Buildx failed"
         echo "#######################"
-        echo
-    fi;
+    fi
 }
 
 function handleImageSubFoldersRecursive {
@@ -117,8 +105,9 @@ function handleImageSubFoldersRecursive {
     local imageVersion=$3
     local subVersion=$4
 
-
+    echo
     echo Handling sub-images in ${folder} with subVersion \"${subVersion}\"
+    echo
     # Handle sub-images in "_*/" Folders
 
     local subImage
@@ -170,7 +159,6 @@ function handleImage {
     else
         echo No Main Dockerfile found, skipping.
     fi
-    pushLasted ${imageName}
     echo
     echo "#####################"
     echo
