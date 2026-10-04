@@ -30,7 +30,7 @@ The working directory is `/app`. On every start the entrypoint creates the
 When the container runs as a non-root user, the ownership fix is skipped and
 commands run as that user.
 
-Queue workers: `docker stop` sends `SIGQUIT`. With the `pcntl` extension the
+Queue workers: `docker stop` sends `SIGQUIT`. Thanks to the `pcntl` extension the
 worker finishes its current job before exiting, so set `stop_grace_period`
 above your longest job timeout:
 
@@ -43,3 +43,31 @@ scheduler:
   image: tekook/laravel-fpm:<tag>
   command: scheduler
 ```
+
+### laravel-fpm PHP and FPM settings
+
+Extensions on top of the official image: `bcmath exif gd intl pcntl
+pdo_mysql redis zip` (`opcache`, `pdo_sqlite` come with the official image).
+`php.ini-production` is active; these variables override it per container:
+
+| Variable                          | Default   | Setting                                        |
+|-----------------------------------|-----------|------------------------------------------------|
+| `PHP_DISPLAY_ERRORS`              | `Off`     | `display_errors`                               |
+| `PHP_MEMORY_LIMIT`                | `256M`    | `memory_limit`                                 |
+| `PHP_MAX_EXECUTION_TIME`          | `30`      | `max_execution_time`                           |
+| `PHP_UPLOAD_MAX_FILESIZE`         | `64M`     | `upload_max_filesize`                          |
+| `PHP_POST_MAX_SIZE`               | `64M`     | `post_max_size`                                |
+| `PHP_OPCACHE_MEMORY_CONSUMPTION`  | `128`     | `opcache.memory_consumption` (MB)              |
+| `PHP_OPCACHE_VALIDATE_TIMESTAMPS` | `1`       | `0` for immutable production images            |
+| `PHP_FPM_PM`                      | `dynamic` | `pm`                                           |
+| `PHP_FPM_PM_MAX_CHILDREN`         | `10`      | `pm.max_children`                              |
+| `PHP_FPM_PM_START_SERVERS`        | `3`       | `pm.start_servers`                             |
+| `PHP_FPM_PM_MIN_SPARE_SERVERS`    | `2`       | `pm.min_spare_servers`                         |
+| `PHP_FPM_PM_MAX_SPARE_SERVERS`    | `5`       | `pm.max_spare_servers`                         |
+| `PHP_FPM_PM_MAX_REQUESTS`         | `500`     | `pm.max_requests`                              |
+| `PHP_FPM_HEALTHCHECK_ADDRESS`     | `127.0.0.1:9000` | FastCGI address the healthcheck probes  |
+
+The image has a `HEALTHCHECK` that asks FPM's `/ping` when php-fpm runs
+(queue/scheduler containers count as healthy while running). `/ping` and
+`/status` are FastCGI paths of the pool; don't route them from a public
+web server.
