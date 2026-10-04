@@ -6,7 +6,7 @@ FROM php:8.1.34-fpm
 RUN set -eux; \
     savedAptMark="$(apt-mark showmanual)"; \
     apt-get update; \
-    apt-get install -y --no-install-recommends gosu sqlite3 \
+    apt-get install -y --no-install-recommends gosu libfcgi-bin sqlite3 \
         libfreetype-dev libicu-dev libjpeg62-turbo-dev libpng-dev libzip-dev zlib1g-dev; \
     docker-php-ext-configure gd --with-freetype --with-jpeg; \
     docker-php-ext-install -j"$(nproc)" bcmath exif gd intl pcntl pdo_mysql zip; \
@@ -14,7 +14,7 @@ RUN set -eux; \
     docker-php-ext-enable redis; \
     rm -rf /tmp/pear; \
     apt-mark auto '.*' > /dev/null; \
-    apt-mark manual $savedAptMark gosu sqlite3 > /dev/null; \
+    apt-mark manual $savedAptMark gosu libfcgi-bin sqlite3 > /dev/null; \
     find /usr/local/lib/php/extensions -type f -name '*.so' -exec ldd '{}' ';' \
         | awk '/=>/ { so = $(NF-1); if (index(so, "/usr/local/") == 1) { next }; gsub("^/(usr/)?", "", so); printf "*%s\n", so }' \
         | sort -u \
@@ -40,10 +40,23 @@ ENV PHP_DISPLAY_ERRORS=Off \
     PHP_OPCACHE_MEMORY_CONSUMPTION=128 \
     PHP_OPCACHE_VALIDATE_TIMESTAMPS=1
 
+# pool sizing from the PHP_FPM_* variables below, ping/status paths for the
+# healthcheck
+COPY laravel/fpm/conf/fpm-pool.conf /usr/local/etc/php-fpm.d/zz-laravel.conf
+ENV PHP_FPM_PM=dynamic \
+    PHP_FPM_PM_MAX_CHILDREN=10 \
+    PHP_FPM_PM_START_SERVERS=3 \
+    PHP_FPM_PM_MIN_SPARE_SERVERS=2 \
+    PHP_FPM_PM_MAX_SPARE_SERVERS=5 \
+    PHP_FPM_PM_MAX_REQUESTS=500
+
 # Set Workdir
 WORKDIR /app
 
 #Set EntryPoint
 COPY --chmod=755 docker-laravel-entrypoint /usr/local/bin/
+COPY --chmod=755 docker-laravel-healthcheck /usr/local/bin/
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD ["docker-laravel-healthcheck"]
 ENTRYPOINT [ "docker-laravel-entrypoint" ]
 CMD ["php-fpm"]

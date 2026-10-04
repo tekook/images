@@ -1,2 +1,3 @@
 docker-laravel-entrypoint text eol=lf
 Dockerfile text eol=lf
+docker-laravel-healthcheck text eol=lf

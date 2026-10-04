@@ -5,7 +5,7 @@ FROM php:8.1.34-fpm-alpine
 # pdo_sqlite and opcache are part of the official image. icu-data-full: all
 # locales for intl (icu-libs alone only has English).
 RUN set -eux; \
-    apk add --no-cache icu-data-full sqlite su-exec; \
+    apk add --no-cache fcgi icu-data-full sqlite su-exec; \
     apk add --no-cache --virtual .build-deps $PHPIZE_DEPS pax-utils \
         freetype-dev icu-dev libjpeg-turbo-dev libpng-dev libzip-dev zlib-dev; \
     docker-php-ext-configure gd --with-freetype --with-jpeg; \
@@ -36,10 +36,23 @@ ENV PHP_DISPLAY_ERRORS=Off \
     PHP_OPCACHE_MEMORY_CONSUMPTION=128 \
     PHP_OPCACHE_VALIDATE_TIMESTAMPS=1
 
+# pool sizing from the PHP_FPM_* variables below, ping/status paths for the
+# healthcheck
+COPY laravel/fpm/conf/fpm-pool.conf /usr/local/etc/php-fpm.d/zz-laravel.conf
+ENV PHP_FPM_PM=dynamic \
+    PHP_FPM_PM_MAX_CHILDREN=10 \
+    PHP_FPM_PM_START_SERVERS=3 \
+    PHP_FPM_PM_MIN_SPARE_SERVERS=2 \
+    PHP_FPM_PM_MAX_SPARE_SERVERS=5 \
+    PHP_FPM_PM_MAX_REQUESTS=500
+
 # Set Workdir
 WORKDIR /app
 
 #Set EntryPoint
 COPY --chmod=755 docker-laravel-entrypoint /usr/local/bin/
+COPY --chmod=755 docker-laravel-healthcheck /usr/local/bin/
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD ["docker-laravel-healthcheck"]
 ENTRYPOINT [ "docker-laravel-entrypoint" ]
 CMD ["php-fpm"]
