@@ -57,8 +57,9 @@ target "laravel-fpm" {
     php    = PHP_VERSIONS
     distro = ["alpine", "debian"]
   }
-  context    = "."
-  dockerfile = "laravel/fpm/Dockerfile.${distro}"
+  description = "PHP ${php} on ${distro == "alpine" ? "Alpine ${ALPINE_VERSION}" : "Debian ${DEBIAN_VERSION}"}"
+  context     = "."
+  dockerfile  = "laravel/fpm/Dockerfile.${distro}"
   args = {
     PHP_VERSION    = php
     ALPINE_VERSION = ALPINE_VERSION

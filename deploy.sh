@@ -5,6 +5,7 @@
 #   ./deploy.sh -p                build for all platforms and push
 #   ./deploy.sh --publisher foo   tag as foo/<image> instead of tekook/<image>
 #   ./deploy.sh -i <target>       only build the given bake target or group
+#   ./deploy.sh -l                list the available targets and groups
 #   ./deploy.sh -- <args>         pass further arguments to "docker buildx bake",
 #                                 e.g. --print
 cd "$(dirname "$0")" || exit 1
@@ -25,6 +26,9 @@ while [ "$1" != "" ]; do
                                 exit 1
                                 ;;
         --pause )               PAUSE_ON_END=1
+                                ;;
+        -l | --list )           docker buildx bake --progress quiet --list targets
+                                exit $?
                                 ;;
         -- )                    shift
                                 BAKE_ARGS+=("$@")

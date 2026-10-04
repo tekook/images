@@ -134,6 +134,7 @@ PHP versions, distro pins and platforms. `deploy.sh` wraps
 
 ```sh
 bash deploy.sh                          # all images, native platform, loaded into docker
+bash deploy.sh -l                       # list targets and groups
 bash deploy.sh -i laravel-fpm-8_4_26-alpine   # a single bake target
 bash deploy.sh -p                       # all platforms, push to Docker Hub
 bash deploy.sh --publisher foo          # tag as foo/laravel-fpm
