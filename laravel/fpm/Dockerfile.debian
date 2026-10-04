@@ -1,4 +1,7 @@
-FROM php:8.3.33-fpm
+# Built via docker-bake.hcl, which sets the PHP and Debian versions.
+ARG PHP_VERSION
+ARG DEBIAN_VERSION
+FROM php:${PHP_VERSION}-fpm-${DEBIAN_VERSION}
 
 # Install the requirements for laravel. Build dependencies are removed again,
 # only the packages providing libraries the compiled extensions link against

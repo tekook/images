@@ -1,3 +1,7 @@
 docker-laravel-entrypoint text eol=lf
 Dockerfile text eol=lf
 docker-laravel-healthcheck text eol=lf
+Dockerfile.* text eol=lf
+docker-bake.hcl text eol=lf
+deploy.sh text eol=lf
+laravel/fpm/conf/* text eol=lf

@@ -1,4 +1,7 @@
-FROM php:8.4.24-fpm-alpine
+# Built via docker-bake.hcl, which sets the PHP and Alpine versions.
+ARG PHP_VERSION
+ARG ALPINE_VERSION
+FROM php:${PHP_VERSION}-fpm-alpine${ALPINE_VERSION}
 
 # Install the requirements for laravel. Build dependencies are removed again,
 # only the shared libraries the compiled extensions link against are kept.
