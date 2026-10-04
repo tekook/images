@@ -39,6 +39,13 @@ if [ -d "storage" ]; then
     fi
 fi
 
+# cache config/routes/views/events; done at startup because the config
+# depends on the runtime environment, and in every mode since each
+# container has its own bootstrap/cache
+if [ -f "artisan" ] && is_true "${RUN_OPTIMIZE}"; then
+    echo Running Optimize
+    ${AS_WWW} php artisan optimize
+fi
 
 if [ "$1" = "scheduler" ]; then
     shift;
