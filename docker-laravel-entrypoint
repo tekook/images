@@ -25,16 +25,18 @@ fi
 
 # ensure directories existence
 if [ -d "storage" ]; then
-    dirs="/app/public /logs /framework/cache /framework/sessions /framework/testing /framework/views"
-    for dir in ${dirs}; do
-        _dir=storage${dir}
-        if [ ! -d ${_dir} ]; then
-            mkdir -p ${_dir}
-        fi
+    for dir in app/public logs framework/cache framework/sessions framework/testing framework/views; do
+        mkdir -p "storage/${dir}"
     done
 
-    # ensure ownership
-    chown -R www-data:www-data /app/storage
+    # ensure ownership of the writable paths, only touching files that need it
+    if [ -n "${AS_WWW}" ] && ! is_true "${SKIP_CHOWN}"; then
+        for dir in storage bootstrap/cache; do
+            if [ -d "${dir}" ]; then
+                find "${dir}" \( ! -user www-data -o ! -group www-data \) -exec chown -h www-data:www-data {} +
+            fi
+        done
+    fi
 fi
 
 
