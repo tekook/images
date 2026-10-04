@@ -1,6 +1,14 @@
 #!/bin/sh
 set -e
 
+# true for 1/true/yes/on (case-insensitive), false for anything else
+is_true() {
+    case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+        1|true|yes|on) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 # command prefix to drop privileges to www-data (su-exec on alpine, gosu on
 # debian); empty if the container already runs as a non-root user
 AS_WWW=""
@@ -39,11 +47,12 @@ elif [ "$1" = "queue" ]; then
     set -- ${AS_WWW} php artisan queue:work "$@"
     echo Starting QueueWorker
 else
-    if [ -f "artisan" ]; then
-        # run migration if wanted
-        if [ "$RUN_MIGRATION" ]; then
-            echo Running Migration
-            (cd /app && php artisan migrate --force)
+    if [ -f "artisan" ] && is_true "${RUN_MIGRATION}"; then
+        echo Running Migration
+        if is_true "${MIGRATE_ISOLATED}"; then
+            ${AS_WWW} php artisan migrate --force --isolated
+        else
+            ${AS_WWW} php artisan migrate --force
         fi
     fi
 
