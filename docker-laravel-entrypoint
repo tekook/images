@@ -1,6 +1,20 @@
 #!/bin/sh
 set -e
 
+# command prefix to drop privileges to www-data (su-exec on alpine, gosu on
+# debian); empty if the container already runs as a non-root user
+AS_WWW=""
+if [ "$(id -u)" = "0" ]; then
+    if command -v su-exec >/dev/null 2>&1; then
+        AS_WWW="su-exec www-data"
+    elif command -v gosu >/dev/null 2>&1; then
+        AS_WWW="gosu www-data"
+    else
+        echo "Neither su-exec nor gosu found, cannot drop privileges" >&2
+        exit 1
+    fi
+fi
+
 # ensure directories existence
 if [ -d "storage" ]; then
     dirs="/app/public /logs /framework/cache /framework/sessions /framework/testing /framework/views"
@@ -20,21 +34,11 @@ if [ "$1" = "scheduler" ]; then
     shift;
     echo Setting up crontab file
     (crontab -u www-data -l 2>/dev/null | grep -qxF "php artisan schedule:run" ) || (crontab -u www-data -l 2>/dev/null | { cat; echo "* * * * * cd ${PWD} && php artisan schedule:run 2>&1"; } | crontab -u www-data -)
-    set -- crond -d 8 -f $@
+    set -- crond -d 8 -f "$@"
     echo Starting crond
 elif [ "$1" = "queue" ]; then
     shift;
-    if command -v su-exec >/dev/null 2>&1; then
-        BINARY="su-exec www-data"
-    elif command -v gosu >/dev/null 2>&1; then
-        BINARY="gosu www-data"
-    else
-        # Fallback: su -s (shell) -c (command)
-        # Note: This is less ideal for signals but works without extra packages
-        BINARY="su -s /bin/sh www-data -c"
-    fi
-    echo "Using: $BINARY"
-    set -- $BINARY php artisan queue:work $@
+    set -- ${AS_WWW} php artisan queue:work "$@"
     echo Starting QueueWorker
 else
     if [ -f "artisan" ]; then
