@@ -67,7 +67,8 @@ function buildImage {
         --platform "${targetPlatforms}" \
         ${tagArgs} \
         ${buildAction} \
-        --progress tty \
+        --pull \
+        --progress auto \
         .
     local status=$?
     echo
