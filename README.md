@@ -149,8 +149,24 @@ Test builds for another registry, with only a custom tag per image (e.g.
     --tag-prefix "dev-2.0-$(git rev-parse --short HEAD)"
 ```
 
-Pushing builds `linux/amd64` and `linux/arm64`, so the buildx builder needs
-both platforms (native nodes or QEMU emulation).
+### Build environment
+
+`deploy.sh` always builds with its own buildx builder `tekook-images`
+(driver `docker-container`, BuildKit pinned in `deploy.sh`), so the result
+does not depend on the builder selected with `docker buildx use` or on the
+BuildKit version bundled with Docker. It creates the builder on first use
+without selecting it globally, and refuses to run if a builder of that name
+uses a different BuildKit image (`docker buildx rm tekook-images` and run
+again). Requires buildx 0.20.0 or newer.
+
+Pushing builds `linux/amd64` and `linux/arm64`; before pushing, `deploy.sh`
+checks that the builder supports every platform. Foreign platforms need QEMU
+emulation, which `--setup-qemu` registers via a privileged
+`tonistiigi/binfmt` container (needed again after a host reboot):
+
+```sh
+./deploy.sh --setup-qemu -p
+```
 
 ### Updating versions
 
