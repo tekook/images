@@ -162,3 +162,4 @@ both platforms (native nodes or QEMU emulation).
 | `laravel/fpm/conf/`             | `php.ini` overrides and FPM pool config     |
 | `docker-laravel-entrypoint`     | entrypoint                                  |
 | `docker-laravel-healthcheck`    | healthcheck script                          |
+| `Changelog.md`                  | changes and migration notes per version     |
