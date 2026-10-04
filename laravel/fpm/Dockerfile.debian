@@ -1,3 +1,4 @@
+# check=skip=InvalidDefaultArgInFrom
 # Built via docker-bake.hcl, which sets the PHP and Debian versions.
 ARG PHP_VERSION
 ARG DEBIAN_VERSION
