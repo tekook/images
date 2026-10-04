@@ -2,7 +2,6 @@
 
 export PUBLISHER=tekook
 export IMAGES=("laravel-fpm")
-export IMAGE_VERSION=1.1.0
 export PLATFORMS="linux/amd64,linux/arm64"
 FAILED_BUILDS=()
 
@@ -80,17 +79,30 @@ function handleDockerfile {
     local imageName=$2
     local imageVersion=$3
     local subVersion=$4
-    
+    local suffix=""
+
     if [ ! -z "$subVersion" ]; then
-        subVersion=-$subVersion
+        suffix=-$subVersion
     fi
 
-    # Prepare all tags for this specific build
-    local fullTag="${imageName}:${imageVersion}${subVersion}"
-    local minorTag="${imageName}:${imageVersion%.*}${subVersion}"
-    local shortTag="${imageName}:${subVersion:1}"
-    
-    local allTags="$fullTag $minorTag $shortTag"
+    # Prepare all tags for this specific build:
+    # full (1.1.0-x), minor (1.1-x) and major (1-x) image version, plus the
+    # bare sub version (x). Duplicates are skipped, e.g. VERSION=1.1 yields no
+    # separate minor tag.
+    local majorVersion=${imageVersion%%.*}
+    local minorVersion=$(cut -d. -f1,2 <<< "${imageVersion}")
+
+    local fullTag="${imageName}:${imageVersion}${suffix}"
+    local allTags="$fullTag"
+    if [ "$minorVersion" != "$imageVersion" ]; then
+        allTags="$allTags ${imageName}:${minorVersion}${suffix}"
+    fi
+    if [ "$majorVersion" != "$minorVersion" ]; then
+        allTags="$allTags ${imageName}:${majorVersion}${suffix}"
+    fi
+    if [ ! -z "$subVersion" ]; then
+        allTags="$allTags ${imageName}:${subVersion}"
+    fi
 
     echo "Using Dockerfile: ${dockerFile} with tags: ${allTags}"
 
