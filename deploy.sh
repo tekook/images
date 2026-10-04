@@ -4,6 +4,10 @@
 #   ./deploy.sh                   build for the native platform, load into docker
 #   ./deploy.sh -p                build for all platforms and push
 #   ./deploy.sh --publisher foo   tag as foo/<image> instead of tekook/<image>
+#                                 (may include a registry: registry.example.com/foo)
+#   ./deploy.sh --tag-prefix dev-2.0-abc123
+#                                 only tag <prefix>-<php version>[-alpine], no
+#                                 release tags (test/dev builds)
 #   ./deploy.sh -i <target>       only build the given bake target or group
 #   ./deploy.sh -l                list the available targets and groups
 #   ./deploy.sh -- <args>         pass further arguments to "docker buildx bake",
@@ -20,6 +24,9 @@ while [ "$1" != "" ]; do
                                 shift
                                 ;;
         --publisher )           export PUBLISHER=$2
+                                shift
+                                ;;
+        --tag-prefix )          export TAG_PREFIX=$2
                                 shift
                                 ;;
         --push-latest)          echo "Support for pushing latest has been dropped! Aborting."
@@ -40,6 +47,15 @@ while [ "$1" != "" ]; do
     esac
     shift
 done
+
+# TAG_PREFIX may also come from the environment, so always announce it
+if [ ! -z "$TAG_PREFIX" ]; then
+    if ! [[ "$TAG_PREFIX" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,99}$ ]]; then
+        echo "Invalid tag prefix '$TAG_PREFIX' (allowed: letters, digits, '_', '.', '-'; max. 100 chars)" >&2
+        exit 1
+    fi
+    echo "Tag prefix active: only ${TAG_PREFIX}-<php version>[-alpine] tags, no release tags" >&2
+fi
 
 if [ ! -z "$PUSH_TO_REGISTRY" ]; then
     BAKE_ARGS=(--push "${BAKE_ARGS[@]}")

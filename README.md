@@ -141,6 +141,14 @@ PHP versions, distro pins and platforms. `deploy.sh` wraps
 ./deploy.sh -- --print                     # show the resolved build definition
 ```
 
+Test builds for another registry, with only a custom tag per image (e.g.
+`dev-2.0-abc123-8.4.26-alpine`) and none of the release tags:
+
+```sh
+./deploy.sh -p --publisher registry.example.com/tekook \
+    --tag-prefix "dev-2.0-$(git rev-parse --short HEAD)"
+```
+
 Pushing builds `linux/amd64` and `linux/arm64`, so the buildx builder needs
 both platforms (native nodes or QEMU emulation).
 

@@ -29,12 +29,19 @@ variable "PLATFORMS" {
   default = ["linux/amd64", "linux/arm64"]
 }
 
+# custom tag prefix for test/dev builds, e.g. dev-2.0-abc123; when set, every
+# image only gets <prefix>-<full php version>[-alpine] instead of the
+# release tags below
+variable "TAG_PREFIX" {
+  default = ""
+}
+
 # Tags for one image: every combination of image version (full, major.minor,
 # major, none; duplicates dropped) and PHP version (8.4.24, 8.4), e.g.
 # 2.0-8.4.24-alpine, 2-8.4-alpine, 8.4-alpine.
 function "tags" {
   params = [image, php, suffix]
-  result = flatten([
+  result = TAG_PREFIX != "" ? ["${PUBLISHER}/${image}:${TAG_PREFIX}-${php}${suffix}"] : flatten([
     for prefix in distinct([
       "${VERSION}-",
       "${join(".", slice(split(".", VERSION), 0, min(2, length(split(".", VERSION)))))}-",
