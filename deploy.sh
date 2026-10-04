@@ -10,8 +10,10 @@ while [ "$1" != "" ]; do
         -p | --push )           PUSH_TO_REGISTRY=1
                                 ;;
         -i | --images )         IMAGES=($2)
+                                shift
                                 ;;
         --publisher )           PUBLISHER=$2
+                                shift
                                 ;;
         --push-latest)          PUSH_LATEST=1
                                 ;;
