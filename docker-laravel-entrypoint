@@ -32,10 +32,8 @@ fi
 
 if [ "$1" = "scheduler" ]; then
     shift;
-    echo Setting up crontab file
-    (crontab -u www-data -l 2>/dev/null | grep -qxF "php artisan schedule:run" ) || (crontab -u www-data -l 2>/dev/null | { cat; echo "* * * * * cd ${PWD} && php artisan schedule:run 2>&1"; } | crontab -u www-data -)
-    set -- crond -d 8 -f "$@"
-    echo Starting crond
+    set -- ${AS_WWW} php artisan schedule:work "$@"
+    echo Starting Scheduler
 elif [ "$1" = "queue" ]; then
     shift;
     set -- ${AS_WWW} php artisan queue:work "$@"
