@@ -133,12 +133,12 @@ PHP versions, distro pins and platforms. `deploy.sh` wraps
 `docker buildx bake`:
 
 ```sh
-bash deploy.sh                          # all images, native platform, loaded into docker
-bash deploy.sh -l                       # list targets and groups
-bash deploy.sh -i laravel-fpm-8_4_26-alpine   # a single bake target
-bash deploy.sh -p                       # all platforms, push to Docker Hub
-bash deploy.sh --publisher foo          # tag as foo/laravel-fpm
-bash deploy.sh -- --print               # show the resolved build definition
+./deploy.sh                                # all images, native platform, loaded into docker
+./deploy.sh -l                             # list targets and groups
+./deploy.sh -i laravel-fpm-8_4_26-alpine   # a single bake target
+./deploy.sh -p                             # all platforms, push to Docker Hub
+./deploy.sh --publisher foo                # tag as foo/laravel-fpm
+./deploy.sh -- --print                     # show the resolved build definition
 ```
 
 Pushing builds `linux/amd64` and `linux/arm64`, so the buildx builder needs
@@ -150,7 +150,7 @@ both platforms (native nodes or QEMU emulation).
    `docker-bake.hcl`, and `VERSION` for a new image version.
 2. Check that the base images exist, e.g.
    `docker buildx imagetools inspect php:8.4.27-fpm-alpine3.24`.
-3. `bash deploy.sh` and test, then `bash deploy.sh -p`.
+3. `./deploy.sh` and test, then `./deploy.sh -p`.
 
 ### Layout
 
