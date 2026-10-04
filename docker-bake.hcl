@@ -29,12 +29,18 @@ variable "PLATFORMS" {
   default = ["linux/amd64", "linux/arm64"]
 }
 
-# Tags for one image: every combination of image version (2.0, 2, none) and
-# PHP version (8.4.24, 8.4), e.g. 2.0-8.4.24-alpine, 2-8.4-alpine, 8.4-alpine.
+# Tags for one image: every combination of image version (full, major.minor,
+# major, none; duplicates dropped) and PHP version (8.4.24, 8.4), e.g.
+# 2.0-8.4.24-alpine, 2-8.4-alpine, 8.4-alpine.
 function "tags" {
   params = [image, php, suffix]
   result = flatten([
-    for prefix in distinct(["${VERSION}-", "${split(".", VERSION)[0]}-", ""]) : [
+    for prefix in distinct([
+      "${VERSION}-",
+      "${join(".", slice(split(".", VERSION), 0, min(2, length(split(".", VERSION)))))}-",
+      "${split(".", VERSION)[0]}-",
+      "",
+    ]) : [
       for p in [php, join(".", slice(split(".", php), 0, 2))] :
         "${PUBLISHER}/${image}:${prefix}${p}${suffix}"
     ]
