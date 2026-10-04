@@ -28,6 +28,18 @@ RUN set -eux; \
         php -m | grep -qixF "$ext"; \
     done
 
+# php.ini-production as base; Laravel related overrides read the PHP_*
+# variables below, which can be changed per container
+RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+COPY laravel/fpm/conf/php.ini $PHP_INI_DIR/conf.d/zz-laravel.ini
+ENV PHP_DISPLAY_ERRORS=Off \
+    PHP_MEMORY_LIMIT=256M \
+    PHP_MAX_EXECUTION_TIME=30 \
+    PHP_UPLOAD_MAX_FILESIZE=64M \
+    PHP_POST_MAX_SIZE=64M \
+    PHP_OPCACHE_MEMORY_CONSUMPTION=128 \
+    PHP_OPCACHE_VALIDATE_TIMESTAMPS=1
+
 # Set Workdir
 WORKDIR /app
 
