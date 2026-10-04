@@ -4,6 +4,7 @@ export PUBLISHER=tekook
 export IMAGES=("laravel-fpm")
 export IMAGE_VERSION=1.1.0
 export PLATFORMS="linux/amd64,linux/arm64"
+FAILED_BUILDS=()
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -68,7 +69,9 @@ function buildImage {
         ${buildAction} \
         --progress tty \
         .
+    local status=$?
     echo
+    return $status
 }
 
 function handleDockerfile {
@@ -90,12 +93,11 @@ function handleDockerfile {
 
     echo "Using Dockerfile: ${dockerFile} with tags: ${allTags}"
 
-    buildImage "${dockerFile}" "${imageName}" "${allTags}"
-    
-    if [ $? -ne 0 ]; then
+    if ! buildImage "${dockerFile}" "${imageName}" "${allTags}"; then
         echo "#######################"
         echo "Buildx failed"
         echo "#######################"
+        FAILED_BUILDS+=("${fullTag} (${dockerFile})")
     fi
 }
 
@@ -170,7 +172,17 @@ for image in ${IMAGES[@]}; do
     handleImage ${image}
 done
 
+if [ ${#FAILED_BUILDS[@]} -ne 0 ]
+then
+    echo "#######################"
+    echo "${#FAILED_BUILDS[@]} build(s) failed:"
+    printf ' - %s\n' "${FAILED_BUILDS[@]}"
+    echo "#######################"
+fi
+
 if [ ! -z "$PAUSE_ON_END" ]
 then
     read -n1 -r -p "Press any key to continue..." key
 fi
+
+[ ${#FAILED_BUILDS[@]} -eq 0 ]
