@@ -1,0 +1,10 @@
+#!/bin/sh
+# Docker HEALTHCHECK. When php-fpm runs, ask the pool's ping.path over
+# FastCGI. Other modes (queue, scheduler, one-off commands) have nothing to
+# probe and count as healthy while the container runs.
+set -e
+
+grep -qx php-fpm /proc/[0-9]*/comm 2>/dev/null || exit 0
+
+SCRIPT_NAME=/ping SCRIPT_FILENAME=/ping REQUEST_METHOD=GET \
+    cgi-fcgi -bind -connect "${PHP_FPM_HEALTHCHECK_ADDRESS:-127.0.0.1:9000}" | grep -q pong

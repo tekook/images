@@ -1,47 +1,67 @@
 #!/bin/sh
 set -e
 
-# ensure directories existence
-if [ -d "storage" ]; then
-    dirs="/app/public /logs /framework/cache /framework/sessions /framework/testing /framework/views"
-    for dir in ${dirs}; do
-        _dir=storage${dir}
-        if [ ! -d ${_dir} ]; then
-            mkdir -p ${_dir}
-        fi
-    done
+# true for 1/true/yes/on (case-insensitive), false for anything else
+is_true() {
+    case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+        1|true|yes|on) return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
-    # ensure ownership
-    chown -R www-data:www-data /app/storage
+# command prefix to drop privileges to www-data (su-exec on alpine, gosu on
+# debian); empty if the container already runs as a non-root user
+AS_WWW=""
+if [ "$(id -u)" = "0" ]; then
+    if command -v su-exec >/dev/null 2>&1; then
+        AS_WWW="su-exec www-data"
+    elif command -v gosu >/dev/null 2>&1; then
+        AS_WWW="gosu www-data"
+    else
+        echo "Neither su-exec nor gosu found, cannot drop privileges" >&2
+        exit 1
+    fi
 fi
 
+# ensure directories existence
+if [ -d "storage" ]; then
+    for dir in app/public logs framework/cache framework/sessions framework/testing framework/views; do
+        mkdir -p "storage/${dir}"
+    done
+
+    # ensure ownership of the writable paths, only touching files that need it
+    if [ -n "${AS_WWW}" ] && ! is_true "${SKIP_CHOWN}"; then
+        for dir in storage bootstrap/cache; do
+            if [ -d "${dir}" ]; then
+                find "${dir}" \( ! -user www-data -o ! -group www-data \) -exec chown -h www-data:www-data {} +
+            fi
+        done
+    fi
+fi
+
+# cache config/routes/views/events; done at startup because the config
+# depends on the runtime environment, and in every mode since each
+# container has its own bootstrap/cache
+if [ -f "artisan" ] && is_true "${RUN_OPTIMIZE}"; then
+    echo Running Optimize
+    ${AS_WWW} php artisan optimize
+fi
 
 if [ "$1" = "scheduler" ]; then
     shift;
-    echo Setting up crontab file
-    (crontab -u www-data -l 2>/dev/null | grep -qxF "php artisan schedule:run" ) || (crontab -u www-data -l 2>/dev/null | { cat; echo "* * * * * cd ${PWD} && php artisan schedule:run 2>&1"; } | crontab -u www-data -)
-    set -- crond -d 8 -f $@
-    echo Starting crond
+    set -- ${AS_WWW} php artisan schedule:work "$@"
+    echo Starting Scheduler
 elif [ "$1" = "queue" ]; then
     shift;
-    if command -v su-exec >/dev/null 2>&1; then
-        BINARY="su-exec www-data"
-    elif command -v gosu >/dev/null 2>&1; then
-        BINARY="gosu www-data"
-    else
-        # Fallback: su -s (shell) -c (command)
-        # Note: This is less ideal for signals but works without extra packages
-        BINARY="su -s /bin/sh www-data -c"
-    fi
-    echo "Using: $BINARY"
-    set -- $BINARY php artisan queue:work $@
+    set -- ${AS_WWW} php artisan queue:work "$@"
     echo Starting QueueWorker
 else
-    if [ -f "artisan" ]; then
-        # run migration if wanted
-        if [ "$RUN_MIGRATION" ]; then
-            echo Running Migration
-            (cd /app && php artisan migrate --force)
+    if [ -f "artisan" ] && is_true "${RUN_MIGRATION}"; then
+        echo Running Migration
+        if is_true "${MIGRATE_ISOLATED}"; then
+            ${AS_WWW} php artisan migrate --force --isolated
+        else
+            ${AS_WWW} php artisan migrate --force
         fi
     fi
 
