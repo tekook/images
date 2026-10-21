@@ -12,7 +12,7 @@ variable "PUBLISHER" {
 
 # PHP releases to build, one per supported minor version
 variable "PHP_VERSIONS" {
-  default = ["8.3.35", "8.4.26", "8.5.11"]
+  default = ["8.3.36", "8.4.27", "8.5.12"]
 }
 
 # distro releases of the php base images (php:<version>-fpm-alpine<x>,
