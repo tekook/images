@@ -12,17 +12,18 @@ as Alpine and Debian variant for `linux/amd64` and `linux/arm64`.
 
 | PHP    | Alpine 3.24          | Debian trixie |
 |--------|----------------------|---------------|
-| 8.5.11 | `2.0-8.5.11-alpine`  | `2.0-8.5.11`  |
-| 8.4.26 | `2.0-8.4.26-alpine`  | `2.0-8.4.26`  |
-| 8.3.35 | `2.0-8.3.35-alpine`  | `2.0-8.3.35`  |
+| 8.5.12 | `2.0-8.5.12-alpine`  | `2.0-8.5.12`  |
+| 8.4.27 | `2.0-8.4.27-alpine`  | `2.0-8.4.27`  |
+| 8.3.36 | `2.0-8.3.36-alpine`  | `2.0-8.3.36`  |
+| 8.2.35 | `2.0-8.2.35-alpine`  | `2.0-8.2.35`  |
 
 Every image is tagged as `[<image version>-]<php version>[-alpine]`, with the
 image version in full (`2.0`), as major (`2`) or left out, and the PHP version
-in full (`8.4.26`) or as minor (`8.4`):
+in full (`8.4.27`) or as minor (`8.4`):
 
 | Tag                  | Moves when                                       |
 |----------------------|--------------------------------------------------|
-| `2.0-8.4.26-alpine`  | the image is rebuilt (OS packages)               |
+| `2.0-8.4.27-alpine`  | the image is rebuilt (OS packages)               |
 | `2.0-8.4-alpine`     | + a new PHP 8.4 patch release                    |
 | `2-8.4-alpine`       | + a new 2.x image version                        |
 | `8.4-alpine`         | + a new major image version (breaking changes)   |
@@ -142,7 +143,7 @@ PHP versions, distro pins and platforms. `deploy.sh` wraps
 ```
 
 Test builds for another registry, with only a custom tag per image (e.g.
-`dev-2.0-abc123-8.4.26-alpine`) and none of the release tags:
+`dev-2.0-abc123-8.4.27-alpine`) and none of the release tags:
 
 ```sh
 ./deploy.sh -p --publisher registry.example.com/tekook \

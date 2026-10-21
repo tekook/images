@@ -2,7 +2,7 @@
 
 ## laravel-fpm 2.0
 
-PHP 8.3.35, 8.4.26 and 8.5.11, each as Alpine 3.24 and Debian trixie
+PHP 8.2.35, 8.3.36, 8.4.27 and 8.5.12, each as Alpine 3.24 and Debian trixie
 variant for `linux/amd64` and `linux/arm64`.
 
 No existing tag changes: 2.0 is published only for new PHP versions, so the
@@ -21,7 +21,7 @@ pointing to 1.1. Switching to 2.0 is always an explicit tag change.
 | Ownership fix | `chown -R` of `storage/` on every start | only entries not owned by `www-data`, now also `bootstrap/cache`, symlinks not followed; skipped for non-root containers | Set `SKIP_CHOWN=true` to keep the entrypoint away from bind-mounted files. |
 | Healthcheck | none | `HEALTHCHECK` probing FPM's `/ping` every 30s | Orchestrators (e.g. Swarm) now replace unhealthy containers. If php-fpm listens somewhere else than `127.0.0.1:9000`, set `PHP_FPM_HEALTHCHECK_ADDRESS`. |
 | Build dependencies | `*-dev` packages stayed in the image | removed after compiling the extensions | Derived images that run `docker-php-ext-install` must install the needed `-dev` packages (and on Alpine `$PHPIZE_DEPS`) themselves. |
-| PHP 8.1 | 8.1.34 | not built anymore | Upgrade to 8.3+, or stay on the 1.x tags. |
+| PHP 8.1 | 8.1.34 | not built anymore | Upgrade to 8.2+, or stay on the 1.x tags. |
 
 PHP setting changes through `php.ini-production` and the new defaults:
 
